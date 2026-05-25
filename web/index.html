@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ising Playground</title>
+  </head>
+  <body>
+    <div id="app">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">2D Ising Model</p>
+          <h1>Ising Playground</h1>
+          <p class="subtitle">
+            A quick, tactile Monte Carlo sketchpad. Adjust temperature and size, then watch the
+            lattice organize itself in real time.
+          </p>
+        </div>
+        <div class="hero__chips">
+          <span class="chip">Metropolis sweeps</span>
+          <span class="chip">Live observables</span>
+          <span class="chip">Mobile ready</span>
+        </div>
+      </header>
+
+      <main class="layout">
+        <section class="panel controls">
+          <h2>Controls</h2>
+
+          <div class="control">
+            <label for="size">L (grid size)</label>
+            <input id="size" type="range" min="8" max="48" step="2" value="32" />
+            <div class="control__meta">
+              <span id="sizeValue">32</span>
+              <span>Recommended max for mobile: 32</span>
+            </div>
+          </div>
+
+          <div class="control">
+            <label for="temperature">Temperature T</label>
+            <input id="temperature" type="range" min="1.5" max="3.5" step="0.05" value="2.30" />
+            <div class="control__meta">
+              <span id="temperatureValue">2.30</span>
+              <span>Critical Tc ~ 2.269</span>
+            </div>
+          </div>
+
+          <div class="control">
+            <label for="speed">Sweeps per frame</label>
+            <input id="speed" type="range" min="1" max="8" step="1" value="2" />
+            <div class="control__meta">
+              <span id="speedValue">2</span>
+              <span>Higher = faster, hotter phone</span>
+            </div>
+          </div>
+
+          <div class="control">
+            <label for="initial">Initial state</label>
+            <select id="initial">
+              <option value="random" selected>Random</option>
+              <option value="up">All up</option>
+              <option value="down">All down</option>
+            </select>
+          </div>
+
+          <div class="button-row">
+            <button id="toggle">Start</button>
+            <button id="step" class="secondary">Step</button>
+            <button id="reset" class="ghost">Reset</button>
+          </div>
+        </section>
+
+        <section class="panel viz">
+          <div class="canvas-wrap">
+            <canvas id="lattice"></canvas>
+          </div>
+          <div class="viz-footer">
+            <span>Sweeps: <strong id="sweeps">0</strong></span>
+            <span>Samples: <strong id="samples">0</strong></span>
+          </div>
+        </section>
+
+        <section class="panel stats">
+          <h2>Observables</h2>
+          <div class="stats-grid">
+            <div class="stat">
+              <span>Energy density (e)</span>
+              <strong id="energy">--</strong>
+            </div>
+            <div class="stat">
+              <span>Magnetization density (m)</span>
+              <strong id="magnetization">--</strong>
+            </div>
+            <div class="stat">
+              <span>Heat capacity (C)</span>
+              <strong id="heatCapacity">--</strong>
+            </div>
+            <div class="stat">
+              <span>Susceptibility (chi)</span>
+              <strong id="susceptibility">--</strong>
+            </div>
+            <div class="stat">
+              <span>Binder U4</span>
+              <strong id="binder">--</strong>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="footer">
+        Runs in your browser. For best results on mobile, keep L at 32 or below.
+      </footer>
+    </div>
+
+    <script type="module" src="/main.ts"></script>
+  </body>
+</html>

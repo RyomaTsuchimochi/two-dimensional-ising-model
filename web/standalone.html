@@ -1,0 +1,785 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ising Playground (Standalone)</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Space+Grotesk:wght@400;600;700&display=swap");
+
+      :root {
+        color-scheme: light;
+        --bg-1: #f8f2e9;
+        --bg-2: #dfeee7;
+        --ink: #1b1a17;
+        --muted: #4c4c4c;
+        --accent: #1c6f64;
+        --accent-2: #f2a154;
+        --panel: rgba(255, 255, 255, 0.9);
+        --panel-border: #e5d8c8;
+        --shadow: 0 18px 40px rgba(20, 20, 20, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Space Grotesk", system-ui, sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 10% 10%, rgba(242, 161, 84, 0.35), transparent 45%),
+          radial-gradient(circle at 90% 15%, rgba(28, 111, 100, 0.25), transparent 40%),
+          linear-gradient(135deg, var(--bg-1), var(--bg-2));
+        min-height: 100vh;
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: -20% 50% 40% -10%;
+        background: conic-gradient(from 140deg, rgba(28, 111, 100, 0.15), transparent 60%);
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      #app {
+        position: relative;
+        z-index: 1;
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 32px 24px 56px;
+      }
+
+      .hero {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 24px;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 24px;
+      }
+
+      .eyebrow {
+        text-transform: uppercase;
+        letter-spacing: 0.22em;
+        font-size: 0.75rem;
+        color: var(--accent);
+        margin: 0 0 12px;
+        font-weight: 600;
+      }
+
+      .hero h1 {
+        font-family: "DM Serif Display", "Times New Roman", serif;
+        font-size: clamp(2.2rem, 4vw, 3.6rem);
+        margin: 0 0 12px;
+      }
+
+      .subtitle {
+        max-width: 520px;
+        color: var(--muted);
+        font-size: 1rem;
+        line-height: 1.6;
+        margin: 0;
+      }
+
+      .hero__chips {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .chip {
+        padding: 8px 14px;
+        border-radius: 999px;
+        background: rgba(28, 111, 100, 0.1);
+        border: 1px solid rgba(28, 111, 100, 0.25);
+        font-size: 0.85rem;
+        font-weight: 600;
+      }
+
+      .layout {
+        display: grid;
+        gap: 20px;
+        grid-template-columns: minmax(240px, 1fr) minmax(260px, 1.2fr) minmax(240px, 1fr);
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--panel-border);
+        border-radius: 20px;
+        padding: 20px;
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(10px);
+        animation: rise 0.7s ease both;
+      }
+
+      .panel:nth-child(2) {
+        animation-delay: 0.08s;
+      }
+
+      .panel:nth-child(3) {
+        animation-delay: 0.16s;
+      }
+
+      @keyframes rise {
+        from {
+          transform: translateY(16px);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+
+      .controls h2,
+      .stats h2 {
+        margin: 0 0 14px;
+        font-size: 1.1rem;
+      }
+
+      .control {
+        display: grid;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+
+      .control label {
+        font-weight: 600;
+      }
+
+      .control__meta {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+
+      input[type="range"] {
+        width: 100%;
+        accent-color: var(--accent);
+      }
+
+      select,
+      button {
+        font-family: inherit;
+      }
+
+      select {
+        padding: 8px 12px;
+        border-radius: 12px;
+        border: 1px solid var(--panel-border);
+        background: white;
+      }
+
+      .button-row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      button {
+        border: none;
+        padding: 10px 18px;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        background: linear-gradient(135deg, var(--accent), #2f8f80);
+        color: white;
+        box-shadow: 0 10px 20px rgba(28, 111, 100, 0.25);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      button.secondary {
+        background: linear-gradient(135deg, #f5c38d, var(--accent-2));
+        color: #2f1d10;
+      }
+
+      button.ghost {
+        background: rgba(27, 26, 23, 0.08);
+        color: var(--ink);
+        box-shadow: none;
+      }
+
+      button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 12px 24px rgba(28, 111, 100, 0.25);
+      }
+
+      .viz {
+        display: grid;
+        gap: 12px;
+      }
+
+      .canvas-wrap {
+        background: #10221c;
+        border-radius: 16px;
+        padding: 12px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      canvas {
+        display: block;
+        border-radius: 10px;
+        background: #0d1a16;
+      }
+
+      .viz-footer {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.9rem;
+        color: var(--muted);
+      }
+
+      .stats-grid {
+        display: grid;
+        gap: 12px;
+      }
+
+      .stat {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.6);
+        border: 1px solid rgba(28, 111, 100, 0.15);
+        font-size: 0.95rem;
+      }
+
+      .stat strong {
+        font-size: 1rem;
+      }
+
+      .footer {
+        margin-top: 24px;
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+
+      @media (max-width: 980px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+
+        .panel {
+          animation-delay: 0s;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          animation-duration: 0.001ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.001ms !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">2D Ising Model</p>
+          <h1>Ising Playground</h1>
+          <p class="subtitle">
+            A quick, tactile Monte Carlo sketchpad. Adjust temperature and size, then watch the
+            lattice organize itself in real time.
+          </p>
+        </div>
+        <div class="hero__chips">
+          <span class="chip">Metropolis sweeps</span>
+          <span class="chip">Live observables</span>
+          <span class="chip">Mobile ready</span>
+        </div>
+      </header>
+
+      <main class="layout">
+        <section class="panel controls">
+          <h2>Controls</h2>
+
+          <div class="control">
+            <label for="size">L (grid size)</label>
+            <input id="size" type="range" min="8" max="48" step="2" value="32" />
+            <div class="control__meta">
+              <span id="sizeValue">32</span>
+              <span>Recommended max for mobile: 32</span>
+            </div>
+          </div>
+
+          <div class="control">
+            <label for="temperature">Temperature T</label>
+            <input id="temperature" type="range" min="1.5" max="3.5" step="0.05" value="2.30" />
+            <div class="control__meta">
+              <span id="temperatureValue">2.30</span>
+              <span>Critical Tc ~ 2.269</span>
+            </div>
+          </div>
+
+          <div class="control">
+            <label for="speed">Sweeps per frame</label>
+            <input id="speed" type="range" min="1" max="8" step="1" value="2" />
+            <div class="control__meta">
+              <span id="speedValue">2</span>
+              <span>Higher = faster, hotter phone</span>
+            </div>
+          </div>
+
+          <div class="control">
+            <label for="initial">Initial state</label>
+            <select id="initial">
+              <option value="random" selected>Random</option>
+              <option value="up">All up</option>
+              <option value="down">All down</option>
+            </select>
+          </div>
+
+          <div class="button-row">
+            <button id="toggle">Start</button>
+            <button id="step" class="secondary">Step</button>
+            <button id="reset" class="ghost">Reset</button>
+          </div>
+        </section>
+
+        <section class="panel viz">
+          <div class="canvas-wrap">
+            <canvas id="lattice"></canvas>
+          </div>
+          <div class="viz-footer">
+            <span>Sweeps: <strong id="sweeps">0</strong></span>
+            <span>Samples: <strong id="samples">0</strong></span>
+          </div>
+        </section>
+
+        <section class="panel stats">
+          <h2>Observables</h2>
+          <div class="stats-grid">
+            <div class="stat">
+              <span>Energy density (e)</span>
+              <strong id="energy">--</strong>
+            </div>
+            <div class="stat">
+              <span>Magnetization density (m)</span>
+              <strong id="magnetization">--</strong>
+            </div>
+            <div class="stat">
+              <span>Heat capacity (C)</span>
+              <strong id="heatCapacity">--</strong>
+            </div>
+            <div class="stat">
+              <span>Susceptibility (chi)</span>
+              <strong id="susceptibility">--</strong>
+            </div>
+            <div class="stat">
+              <span>Binder U4</span>
+              <strong id="binder">--</strong>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="footer">
+        Runs in your browser. For best results on mobile, keep L at 32 or below.
+      </footer>
+    </div>
+
+    <script>
+      class Mulberry32 {
+        constructor(seed) {
+          this.state = seed >>> 0;
+        }
+
+        next() {
+          let t = (this.state += 0x6d2b79f5);
+          t = Math.imul(t ^ (t >>> 15), t | 1);
+          t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        }
+
+        int(maxExclusive) {
+          return Math.floor(this.next() * maxExclusive);
+        }
+      }
+
+      function createRng(seed) {
+        if (seed === undefined || Number.isNaN(seed)) {
+          return {
+            next: () => Math.random(),
+            int: (maxExclusive) => Math.floor(Math.random() * maxExclusive),
+          };
+        }
+        return new Mulberry32(Math.floor(seed));
+      }
+
+      class IsingModel {
+        constructor(L, initial, seed, J = 1) {
+          if (!Number.isInteger(L) || L <= 0) {
+            throw new Error("L must be a positive integer.");
+          }
+
+          this.L = L;
+          this.N = L * L;
+          this.J = J;
+          this.rng = createRng(seed);
+          this.spins = new Int8Array(this.N);
+          this.order = new Int32Array(this.N);
+
+          for (let i = 0; i < this.N; i++) {
+            this.order[i] = i;
+          }
+
+          this.initializeSpins(initial);
+          this.energy = this.computeTotalEnergy();
+          this.magnetization = this.computeMagnetization();
+        }
+
+        sweep(beta) {
+          this.shuffleOrder();
+          for (let i = 0; i < this.N; i++) {
+            this.attemptFlip(this.order[i], beta);
+          }
+        }
+
+        attemptFlip(index, beta) {
+          const dE = this.deltaEnergyAt(index);
+          if (dE <= 0 || this.rng.next() < Math.exp(-beta * dE)) {
+            const s = this.spins[index];
+            this.spins[index] = s === 1 ? -1 : 1;
+            this.energy += dE;
+            this.magnetization -= 2 * s;
+          }
+        }
+
+        deltaEnergyAt(index) {
+          const L = this.L;
+          const x = index % L;
+          const y = Math.floor(index / L);
+
+          const left = x === 0 ? index + (L - 1) : index - 1;
+          const right = x === L - 1 ? index - (L - 1) : index + 1;
+          const up = y === 0 ? index + L * (L - 1) : index - L;
+          const down = y === L - 1 ? index - L * (L - 1) : index + L;
+
+          const s = this.spins[index];
+          const neighborSum =
+            this.spins[left] + this.spins[right] + this.spins[up] + this.spins[down];
+          return 2 * this.J * s * neighborSum;
+        }
+
+        shuffleOrder() {
+          for (let i = this.order.length - 1; i > 0; i--) {
+            const j = this.rng.int(i + 1);
+            const temp = this.order[i];
+            this.order[i] = this.order[j];
+            this.order[j] = temp;
+          }
+        }
+
+        initializeSpins(initial) {
+          if (initial === "up" || initial === "down") {
+            const value = initial === "up" ? 1 : -1;
+            this.spins.fill(value);
+            return;
+          }
+
+          for (let i = 0; i < this.N; i++) {
+            this.spins[i] = this.rng.next() < 0.5 ? 1 : -1;
+          }
+        }
+
+        computeTotalEnergy() {
+          let energy = 0;
+          const L = this.L;
+
+          for (let y = 0; y < L; y++) {
+            const row = y * L;
+            const upRow = (y === 0 ? L - 1 : y - 1) * L;
+
+            for (let x = 0; x < L; x++) {
+              const i = row + x;
+              const right = row + (x === L - 1 ? 0 : x + 1);
+              const up = upRow + x;
+              energy += -this.J * this.spins[i] * (this.spins[right] + this.spins[up]);
+            }
+          }
+
+          return energy;
+        }
+
+        computeMagnetization() {
+          let total = 0;
+          for (let i = 0; i < this.N; i++) {
+            total += this.spins[i];
+          }
+          return total;
+        }
+      }
+
+      class StatsAccumulator {
+        constructor() {
+          this.reset();
+        }
+
+        reset() {
+          this.samples = 0;
+          this.energySum = 0;
+          this.energy2Sum = 0;
+          this.magnetizationSum = 0;
+          this.magnetization2Sum = 0;
+          this.magnetization4Sum = 0;
+        }
+
+        addSample(energy, magnetization) {
+          this.samples += 1;
+          this.energySum += energy;
+          this.energy2Sum += energy * energy;
+          this.magnetizationSum += magnetization;
+          this.magnetization2Sum += magnetization * magnetization;
+          this.magnetization4Sum += magnetization * magnetization * magnetization * magnetization;
+        }
+
+        getObservables(beta, N) {
+          if (this.samples === 0) {
+            return {
+              energyDensity: Number.NaN,
+              magnetizationDensity: Number.NaN,
+              heatCapacity: Number.NaN,
+              susceptibility: Number.NaN,
+              binderU4: Number.NaN,
+            };
+          }
+
+          const energyAvg = this.energySum / this.samples;
+          const energy2Avg = this.energy2Sum / this.samples;
+          const magnetizationAvg = this.magnetizationSum / this.samples;
+          const magnetization2Avg = this.magnetization2Sum / this.samples;
+          const magnetization4Avg = this.magnetization4Sum / this.samples;
+
+          const heatCapacity = (beta * beta / N) * (energy2Avg - energyAvg * energyAvg);
+          const susceptibility = (beta / N) * (magnetization2Avg - magnetizationAvg * magnetizationAvg);
+          const binderU4 =
+            magnetization2Avg === 0
+              ? 0
+              : 1 - magnetization4Avg / (3 * magnetization2Avg * magnetization2Avg);
+
+          return {
+            energyDensity: energyAvg / N,
+            magnetizationDensity: magnetizationAvg / N,
+            heatCapacity,
+            susceptibility,
+            binderU4,
+          };
+        }
+      }
+
+      const sizeInput = document.querySelector("#size");
+      const temperatureInput = document.querySelector("#temperature");
+      const speedInput = document.querySelector("#speed");
+      const initialSelect = document.querySelector("#initial");
+      const toggleButton = document.querySelector("#toggle");
+      const stepButton = document.querySelector("#step");
+      const resetButton = document.querySelector("#reset");
+      const sizeValue = document.querySelector("#sizeValue");
+      const temperatureValue = document.querySelector("#temperatureValue");
+      const speedValue = document.querySelector("#speedValue");
+      const sweepsValue = document.querySelector("#sweeps");
+      const samplesValue = document.querySelector("#samples");
+      const energyValue = document.querySelector("#energy");
+      const magnetizationValue = document.querySelector("#magnetization");
+      const heatCapacityValue = document.querySelector("#heatCapacity");
+      const susceptibilityValue = document.querySelector("#susceptibility");
+      const binderValue = document.querySelector("#binder");
+      const canvas = document.querySelector("#lattice");
+      const canvasWrap = document.querySelector(".canvas-wrap");
+
+      if (
+        !sizeInput ||
+        !temperatureInput ||
+        !speedInput ||
+        !initialSelect ||
+        !toggleButton ||
+        !stepButton ||
+        !resetButton ||
+        !sizeValue ||
+        !temperatureValue ||
+        !speedValue ||
+        !sweepsValue ||
+        !samplesValue ||
+        !energyValue ||
+        !magnetizationValue ||
+        !heatCapacityValue ||
+        !susceptibilityValue ||
+        !binderValue ||
+        !canvas ||
+        !canvasWrap
+      ) {
+        throw new Error("Missing UI elements.");
+      }
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        throw new Error("Canvas context not available.");
+      }
+
+      const colors = {
+        up: "#f6efe5",
+        down: "#1c6f64",
+        background: "#0d1a16",
+      };
+
+      let model = createModel();
+      let stats = new StatsAccumulator();
+      let sweeps = 0;
+      let running = false;
+      let frameId = null;
+
+      function createModel() {
+        const L = parseInt(sizeInput.value, 10);
+        const initial = initialSelect.value;
+        return new IsingModel(L, initial);
+      }
+
+      function resetModel() {
+        model = createModel();
+        stats.reset();
+        sweeps = 0;
+        updateStats();
+        drawLattice();
+      }
+
+      function getBeta() {
+        const temperature = parseFloat(temperatureInput.value);
+        return 1 / temperature;
+      }
+
+      function runSweeps(count) {
+        const beta = getBeta();
+        for (let i = 0; i < count; i++) {
+          model.sweep(beta);
+          stats.addSample(model.energy, model.magnetization);
+          sweeps += 1;
+        }
+      }
+
+      function updateLabels() {
+        sizeValue.textContent = sizeInput.value;
+        temperatureValue.textContent = parseFloat(temperatureInput.value).toFixed(2);
+        speedValue.textContent = speedInput.value;
+      }
+
+      function updateStats() {
+        const observables = stats.getObservables(getBeta(), model.N);
+        sweepsValue.textContent = String(sweeps);
+        samplesValue.textContent = String(stats.samples);
+        energyValue.textContent = formatNumber(observables.energyDensity, 5);
+        magnetizationValue.textContent = formatNumber(observables.magnetizationDensity, 5);
+        heatCapacityValue.textContent = formatNumber(observables.heatCapacity, 5);
+        susceptibilityValue.textContent = formatNumber(observables.susceptibility, 5);
+        binderValue.textContent = formatNumber(observables.binderU4, 5);
+      }
+
+      function formatNumber(value, digits) {
+        return Number.isFinite(value) ? value.toFixed(digits) : "--";
+      }
+
+      function drawLattice() {
+        const containerSize = Math.floor(canvasWrap.clientWidth);
+        const cellSize = Math.max(1, Math.floor(containerSize / model.L));
+        const canvasSize = cellSize * model.L;
+        const dpr = window.devicePixelRatio || 1;
+
+        canvas.width = Math.floor(canvasSize * dpr);
+        canvas.height = Math.floor(canvasSize * dpr);
+        canvas.style.width = `${canvasSize}px`;
+        canvas.style.height = `${canvasSize}px`;
+
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.fillStyle = colors.background;
+        ctx.fillRect(0, 0, canvasSize, canvasSize);
+
+        for (let y = 0; y < model.L; y++) {
+          for (let x = 0; x < model.L; x++) {
+            const index = y * model.L + x;
+            ctx.fillStyle = model.spins[index] === 1 ? colors.up : colors.down;
+            ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+          }
+        }
+      }
+
+      function stopLoop() {
+        running = false;
+        toggleButton.textContent = "Start";
+        if (frameId !== null) {
+          cancelAnimationFrame(frameId);
+          frameId = null;
+        }
+      }
+
+      function startLoop() {
+        if (running) {
+          return;
+        }
+        running = true;
+        toggleButton.textContent = "Stop";
+        frameId = requestAnimationFrame(loop);
+      }
+
+      function loop() {
+        if (!running) {
+          return;
+        }
+
+        const sweepsPerFrame = parseInt(speedInput.value, 10);
+        runSweeps(sweepsPerFrame);
+        drawLattice();
+        updateStats();
+        frameId = requestAnimationFrame(loop);
+      }
+
+      sizeInput.addEventListener("input", () => {
+        updateLabels();
+        resetModel();
+      });
+
+      temperatureInput.addEventListener("input", () => {
+        updateLabels();
+        updateStats();
+      });
+
+      speedInput.addEventListener("input", updateLabels);
+
+      initialSelect.addEventListener("change", () => {
+        resetModel();
+      });
+
+      toggleButton.addEventListener("click", () => {
+        if (running) {
+          stopLoop();
+        } else {
+          startLoop();
+        }
+      });
+
+      stepButton.addEventListener("click", () => {
+        runSweeps(1);
+        drawLattice();
+        updateStats();
+      });
+
+      resetButton.addEventListener("click", () => {
+        resetModel();
+      });
+
+      new ResizeObserver(() => {
+        drawLattice();
+      }).observe(canvasWrap);
+
+      updateLabels();
+      resetModel();
+    </script>
+  </body>
+</html>
