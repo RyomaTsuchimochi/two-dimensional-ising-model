@@ -28,10 +28,10 @@ npm test
 ```
 
 ## Web UI (mobile)
-サーバーレスでスマホ内だけで動かしたい場合は、standalone HTML を使います。
+サーバーレスでスマホ内だけで動かしたい場合は、assignment HTML を使います。
 
 ```text
-web/standalone.html
+web/assignment.html
 ```
 
 このファイルをスマホにコピーしてブラウザで開くだけで動作します（サーバー不要）。
@@ -61,7 +61,8 @@ npm run build:web
 - src/: TypeScript 実装
 - tests/: 小さな L 向けユニットテスト
 - web/: モバイル向け簡易シミュレーター
-- web/standalone.html: スマホ内で完結する単一HTML
+- web/assignment.html: 課題クリア用の単一HTML（オフライン）
+- web/standalone.html: シンプルなデモ
 - web-dist/: Web UI のビルド成果物（gitignore）
 - output/: 実行時に生成（gitignore）
 - package.json, tsconfig.json: ビルド設定

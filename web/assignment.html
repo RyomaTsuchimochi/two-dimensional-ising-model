@@ -1,0 +1,1181 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ising Lab (Offline)</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg-1: #f8f2e9;
+        --bg-2: #dfeee7;
+        --ink: #1b1a17;
+        --muted: #4c4c4c;
+        --accent: #1c6f64;
+        --accent-2: #f2a154;
+        --panel: rgba(255, 255, 255, 0.92);
+        --panel-border: #e5d8c8;
+        --shadow: 0 18px 40px rgba(20, 20, 20, 0.12);
+        --chart-grid: rgba(27, 26, 23, 0.1);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Avenir Next", "Gill Sans", "Trebuchet MS", sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 10% 10%, rgba(242, 161, 84, 0.35), transparent 45%),
+          radial-gradient(circle at 90% 15%, rgba(28, 111, 100, 0.25), transparent 40%),
+          linear-gradient(135deg, var(--bg-1), var(--bg-2));
+        min-height: 100vh;
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: -20% 50% 40% -10%;
+        background: conic-gradient(from 140deg, rgba(28, 111, 100, 0.15), transparent 60%);
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      #app {
+        position: relative;
+        z-index: 1;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 28px 20px 56px;
+      }
+
+      .hero {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 24px;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 24px;
+      }
+
+      .eyebrow {
+        text-transform: uppercase;
+        letter-spacing: 0.22em;
+        font-size: 0.75rem;
+        color: var(--accent);
+        margin: 0 0 12px;
+        font-weight: 600;
+      }
+
+      .hero h1 {
+        font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, serif;
+        font-size: clamp(2.2rem, 4vw, 3.6rem);
+        margin: 0 0 12px;
+      }
+
+      .subtitle {
+        max-width: 520px;
+        color: var(--muted);
+        font-size: 1rem;
+        line-height: 1.6;
+        margin: 0;
+      }
+
+      .hero__chips {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .chip {
+        padding: 8px 14px;
+        border-radius: 999px;
+        background: rgba(28, 111, 100, 0.1);
+        border: 1px solid rgba(28, 111, 100, 0.25);
+        font-size: 0.85rem;
+        font-weight: 600;
+      }
+
+      .layout {
+        display: grid;
+        gap: 20px;
+        grid-template-columns: minmax(280px, 1.05fr) minmax(320px, 1.4fr);
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--panel-border);
+        border-radius: 20px;
+        padding: 20px;
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(10px);
+        animation: rise 0.7s ease both;
+      }
+
+      .panel.wide {
+        grid-column: 1 / -1;
+      }
+
+      @keyframes rise {
+        from {
+          transform: translateY(16px);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+
+      .controls h2,
+      .stats h2,
+      .chart h2 {
+        margin: 0 0 14px;
+        font-size: 1.1rem;
+      }
+
+      .field {
+        display: grid;
+        gap: 8px;
+        margin-bottom: 14px;
+      }
+
+      .field label {
+        font-weight: 600;
+      }
+
+      .field small {
+        color: var(--muted);
+      }
+
+      .field input,
+      .field select {
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid var(--panel-border);
+        background: white;
+        font-family: inherit;
+      }
+
+      .grid-2 {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .button-row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 8px;
+      }
+
+      button {
+        border: none;
+        padding: 10px 18px;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        background: linear-gradient(135deg, var(--accent), #2f8f80);
+        color: white;
+        box-shadow: 0 10px 20px rgba(28, 111, 100, 0.25);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      button.secondary {
+        background: linear-gradient(135deg, #f5c38d, var(--accent-2));
+        color: #2f1d10;
+      }
+
+      button.ghost {
+        background: rgba(27, 26, 23, 0.08);
+        color: var(--ink);
+        box-shadow: none;
+      }
+
+      button:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+        box-shadow: none;
+        transform: none;
+      }
+
+      button:hover:not(:disabled) {
+        transform: translateY(-1px);
+        box-shadow: 0 12px 24px rgba(28, 111, 100, 0.25);
+      }
+
+      .progress {
+        display: grid;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      progress {
+        width: 100%;
+        height: 10px;
+        border-radius: 999px;
+        overflow: hidden;
+        accent-color: var(--accent);
+      }
+
+      .progress__meta {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+
+      .canvas-wrap {
+        background: #10221c;
+        border-radius: 16px;
+        padding: 12px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      canvas.lattice {
+        display: block;
+        border-radius: 10px;
+        background: #0d1a16;
+      }
+
+      .viz-footer {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.9rem;
+        color: var(--muted);
+        margin-top: 10px;
+      }
+
+      .stats-grid {
+        display: grid;
+        gap: 12px;
+      }
+
+      .stat {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.6);
+        border: 1px solid rgba(28, 111, 100, 0.15);
+        font-size: 0.95rem;
+      }
+
+      .stat strong {
+        font-size: 1rem;
+      }
+
+      .chart canvas {
+        width: 100%;
+        height: 240px;
+        display: block;
+        border-radius: 12px;
+        background: white;
+        border: 1px solid rgba(28, 111, 100, 0.12);
+      }
+
+      .legend {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: 10px;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+
+      .legend span {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .legend i {
+        width: 12px;
+        height: 12px;
+        border-radius: 4px;
+        display: inline-block;
+      }
+
+      .footer {
+        margin-top: 24px;
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+
+      @media (max-width: 980px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+
+        .panel {
+          animation-delay: 0s;
+        }
+
+        .grid-2 {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          animation-duration: 0.001ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.001ms !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">2D Ising Model</p>
+          <h1>Ising Lab (Offline)</h1>
+          <p class="subtitle">
+            A self contained Monte Carlo worksheet: sweep temperatures, estimate Tc from Binder
+            crossings, and visualize the lattice. No server required.
+          </p>
+        </div>
+        <div class="hero__chips">
+          <span class="chip">Finite size sweep</span>
+          <span class="chip">Binder U4 curves</span>
+          <span class="chip">Mobile ready</span>
+        </div>
+      </header>
+
+      <main class="layout">
+        <section class="panel controls">
+          <h2>Batch Sweep</h2>
+
+          <div class="field">
+            <label for="lList">L list (comma or start:end:step)</label>
+            <input id="lList" type="text" value="16,24,32" />
+            <small>Mobile tip: keep max L at 32.</small>
+          </div>
+
+          <div class="grid-2">
+            <div class="field">
+              <label for="tStart">T start</label>
+              <input id="tStart" type="number" step="0.01" value="2.0" />
+            </div>
+            <div class="field">
+              <label for="tEnd">T end</label>
+              <input id="tEnd" type="number" step="0.01" value="2.6" />
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="field">
+              <label for="tStep">T step</label>
+              <input id="tStep" type="number" step="0.01" value="0.05" />
+            </div>
+            <div class="field">
+              <label for="initial">Initial state</label>
+              <select id="initial">
+                <option value="random" selected>Random</option>
+                <option value="up">All up</option>
+                <option value="down">All down</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="field">
+              <label for="thermal">Thermalization sweeps</label>
+              <input id="thermal" type="number" step="10" value="200" />
+            </div>
+            <div class="field">
+              <label for="sample">Sampling sweeps</label>
+              <input id="sample" type="number" step="10" value="600" />
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="field">
+              <label for="interval">Sample interval</label>
+              <input id="interval" type="number" step="1" value="5" />
+            </div>
+            <div class="field">
+              <label for="seed">Seed (optional)</label>
+              <input id="seed" type="number" placeholder="leave blank" />
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="field">
+              <label for="benchSweeps">Benchmark sweeps</label>
+              <input id="benchSweeps" type="number" step="10" value="150" />
+            </div>
+            <div class="field">
+              <label for="benchTemp">Benchmark temperature</label>
+              <input id="benchTemp" type="number" step="0.01" value="2.3" />
+            </div>
+          </div>
+
+          <div class="button-row">
+            <button id="run">Run sweep</button>
+            <button id="stop" class="secondary" disabled>Stop</button>
+            <button id="reset" class="ghost">Reset results</button>
+          </div>
+
+          <div class="progress">
+            <progress id="progress" value="0" max="1"></progress>
+            <div class="progress__meta">
+              <span id="status">Idle</span>
+              <span id="progressLabel">0 / 0</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Live Lattice</h2>
+          <div class="canvas-wrap">
+            <canvas id="lattice" class="lattice"></canvas>
+          </div>
+          <div class="viz-footer">
+            <span>Current L/T: <strong id="currentLT">-</strong></span>
+            <span>Sweeps: <strong id="currentSweeps">0</strong></span>
+          </div>
+        </section>
+
+        <section class="panel stats">
+          <h2>Latest Observables</h2>
+          <div class="stats-grid">
+            <div class="stat">
+              <span>Tc estimate (largest L pair)</span>
+              <strong id="tcValue">--</strong>
+            </div>
+            <div class="stat">
+              <span>Energy density (e)</span>
+              <strong id="energyValue">--</strong>
+            </div>
+            <div class="stat">
+              <span>Magnetization density (m)</span>
+              <strong id="magnetizationValue">--</strong>
+            </div>
+            <div class="stat">
+              <span>Heat capacity (C)</span>
+              <strong id="heatCapacityValue">--</strong>
+            </div>
+            <div class="stat">
+              <span>Susceptibility (chi)</span>
+              <strong id="susceptibilityValue">--</strong>
+            </div>
+            <div class="stat">
+              <span>Binder U4</span>
+              <strong id="binderValue">--</strong>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel chart wide">
+          <h2>Binder U4 vs Temperature</h2>
+          <canvas id="chartU4"></canvas>
+          <div id="legendU4" class="legend"></div>
+        </section>
+
+        <section class="panel chart wide">
+          <h2>Heat Capacity vs Temperature</h2>
+          <canvas id="chartC"></canvas>
+          <div id="legendC" class="legend"></div>
+        </section>
+
+        <section class="panel chart wide">
+          <h2>O(L^2) Timing Check</h2>
+          <canvas id="chartPerf"></canvas>
+          <div id="legendPerf" class="legend"></div>
+        </section>
+      </main>
+
+      <footer class="footer">
+        Offline page. Copy this file to your phone and open it in the browser.
+      </footer>
+    </div>
+
+    <script>
+      class Mulberry32 {
+        constructor(seed) {
+          this.state = seed >>> 0;
+        }
+
+        next() {
+          let t = (this.state += 0x6d2b79f5);
+          t = Math.imul(t ^ (t >>> 15), t | 1);
+          t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        }
+
+        int(maxExclusive) {
+          return Math.floor(this.next() * maxExclusive);
+        }
+      }
+
+      function createRng(seed) {
+        if (seed === undefined || Number.isNaN(seed)) {
+          return {
+            next: () => Math.random(),
+            int: (maxExclusive) => Math.floor(Math.random() * maxExclusive),
+          };
+        }
+        return new Mulberry32(Math.floor(seed));
+      }
+
+      class IsingModel {
+        constructor(L, initial, seed, J = 1) {
+          if (!Number.isInteger(L) || L <= 0) {
+            throw new Error("L must be a positive integer.");
+          }
+
+          this.L = L;
+          this.N = L * L;
+          this.J = J;
+          this.rng = createRng(seed);
+          this.spins = new Int8Array(this.N);
+          this.order = new Int32Array(this.N);
+
+          for (let i = 0; i < this.N; i++) {
+            this.order[i] = i;
+          }
+
+          this.initializeSpins(initial);
+          this.energy = this.computeTotalEnergy();
+          this.magnetization = this.computeMagnetization();
+        }
+
+        sweep(beta) {
+          this.shuffleOrder();
+          for (let i = 0; i < this.N; i++) {
+            this.attemptFlip(this.order[i], beta);
+          }
+        }
+
+        attemptFlip(index, beta) {
+          const dE = this.deltaEnergyAt(index);
+          if (dE <= 0 || this.rng.next() < Math.exp(-beta * dE)) {
+            const s = this.spins[index];
+            this.spins[index] = s === 1 ? -1 : 1;
+            this.energy += dE;
+            this.magnetization -= 2 * s;
+          }
+        }
+
+        deltaEnergyAt(index) {
+          const L = this.L;
+          const x = index % L;
+          const y = Math.floor(index / L);
+
+          const left = x === 0 ? index + (L - 1) : index - 1;
+          const right = x === L - 1 ? index - (L - 1) : index + 1;
+          const up = y === 0 ? index + L * (L - 1) : index - L;
+          const down = y === L - 1 ? index - L * (L - 1) : index + L;
+
+          const s = this.spins[index];
+          const neighborSum =
+            this.spins[left] + this.spins[right] + this.spins[up] + this.spins[down];
+          return 2 * this.J * s * neighborSum;
+        }
+
+        shuffleOrder() {
+          for (let i = this.order.length - 1; i > 0; i--) {
+            const j = this.rng.int(i + 1);
+            const temp = this.order[i];
+            this.order[i] = this.order[j];
+            this.order[j] = temp;
+          }
+        }
+
+        initializeSpins(initial) {
+          if (initial === "up" || initial === "down") {
+            const value = initial === "up" ? 1 : -1;
+            this.spins.fill(value);
+            return;
+          }
+
+          for (let i = 0; i < this.N; i++) {
+            this.spins[i] = this.rng.next() < 0.5 ? 1 : -1;
+          }
+        }
+
+        computeTotalEnergy() {
+          let energy = 0;
+          const L = this.L;
+
+          for (let y = 0; y < L; y++) {
+            const row = y * L;
+            const upRow = (y === 0 ? L - 1 : y - 1) * L;
+
+            for (let x = 0; x < L; x++) {
+              const i = row + x;
+              const right = row + (x === L - 1 ? 0 : x + 1);
+              const up = upRow + x;
+              energy += -this.J * this.spins[i] * (this.spins[right] + this.spins[up]);
+            }
+          }
+
+          return energy;
+        }
+
+        computeMagnetization() {
+          let total = 0;
+          for (let i = 0; i < this.N; i++) {
+            total += this.spins[i];
+          }
+          return total;
+        }
+      }
+
+      class StatsAccumulator {
+        constructor() {
+          this.reset();
+        }
+
+        reset() {
+          this.samples = 0;
+          this.energySum = 0;
+          this.energy2Sum = 0;
+          this.magnetizationSum = 0;
+          this.magnetization2Sum = 0;
+          this.magnetization4Sum = 0;
+        }
+
+        addSample(energy, magnetization) {
+          this.samples += 1;
+          this.energySum += energy;
+          this.energy2Sum += energy * energy;
+          this.magnetizationSum += magnetization;
+          this.magnetization2Sum += magnetization * magnetization;
+          this.magnetization4Sum +=
+            magnetization * magnetization * magnetization * magnetization;
+        }
+
+        getObservables(beta, N) {
+          if (this.samples === 0) {
+            return {
+              energyDensity: Number.NaN,
+              magnetizationDensity: Number.NaN,
+              heatCapacity: Number.NaN,
+              susceptibility: Number.NaN,
+              binderU4: Number.NaN,
+            };
+          }
+
+          const energyAvg = this.energySum / this.samples;
+          const energy2Avg = this.energy2Sum / this.samples;
+          const magnetizationAvg = this.magnetizationSum / this.samples;
+          const magnetization2Avg = this.magnetization2Sum / this.samples;
+          const magnetization4Avg = this.magnetization4Sum / this.samples;
+
+          const heatCapacity = (beta * beta / N) * (energy2Avg - energyAvg * energyAvg);
+          const susceptibility =
+            (beta / N) * (magnetization2Avg - magnetizationAvg * magnetizationAvg);
+          const binderU4 =
+            magnetization2Avg === 0
+              ? 0
+              : 1 - magnetization4Avg / (3 * magnetization2Avg * magnetization2Avg);
+
+          return {
+            energyDensity: energyAvg / N,
+            magnetizationDensity: magnetizationAvg / N,
+            heatCapacity,
+            susceptibility,
+            binderU4,
+          };
+        }
+      }
+
+      const palette = ["#1c6f64", "#f2a154", "#9b7b6f", "#245d89", "#6d4c7b"];
+
+      const elements = {
+        lList: document.querySelector("#lList"),
+        tStart: document.querySelector("#tStart"),
+        tEnd: document.querySelector("#tEnd"),
+        tStep: document.querySelector("#tStep"),
+        thermal: document.querySelector("#thermal"),
+        sample: document.querySelector("#sample"),
+        interval: document.querySelector("#interval"),
+        seed: document.querySelector("#seed"),
+        initial: document.querySelector("#initial"),
+        benchSweeps: document.querySelector("#benchSweeps"),
+        benchTemp: document.querySelector("#benchTemp"),
+        run: document.querySelector("#run"),
+        stop: document.querySelector("#stop"),
+        reset: document.querySelector("#reset"),
+        progress: document.querySelector("#progress"),
+        status: document.querySelector("#status"),
+        progressLabel: document.querySelector("#progressLabel"),
+        currentLT: document.querySelector("#currentLT"),
+        currentSweeps: document.querySelector("#currentSweeps"),
+        tcValue: document.querySelector("#tcValue"),
+        energyValue: document.querySelector("#energyValue"),
+        magnetizationValue: document.querySelector("#magnetizationValue"),
+        heatCapacityValue: document.querySelector("#heatCapacityValue"),
+        susceptibilityValue: document.querySelector("#susceptibilityValue"),
+        binderValue: document.querySelector("#binderValue"),
+        chartU4: document.querySelector("#chartU4"),
+        chartC: document.querySelector("#chartC"),
+        chartPerf: document.querySelector("#chartPerf"),
+        legendU4: document.querySelector("#legendU4"),
+        legendC: document.querySelector("#legendC"),
+        legendPerf: document.querySelector("#legendPerf"),
+        lattice: document.querySelector("#lattice"),
+        canvasWrap: document.querySelector(".canvas-wrap"),
+      };
+
+      for (const key of Object.keys(elements)) {
+        if (!elements[key]) {
+          throw new Error(`Missing element: ${key}`);
+        }
+      }
+
+      const ctxLattice = elements.lattice.getContext("2d");
+      if (!ctxLattice) {
+        throw new Error("Canvas context not available.");
+      }
+
+      const colors = {
+        up: "#f6efe5",
+        down: "#1c6f64",
+        background: "#0d1a16",
+      };
+
+      let running = false;
+      let abort = false;
+      let results = new Map();
+      let latestModel = null;
+
+      function parseNumberList(value, fallback) {
+        if (!value) {
+          return fallback;
+        }
+
+        if (value.includes(":")) {
+          const parts = value.split(":").map(Number);
+          if (parts.length !== 3 || parts.some((num) => !Number.isFinite(num))) {
+            throw new Error("Invalid range format. Use start:end:step.");
+          }
+          const [start, end, step] = parts;
+          if (step <= 0) {
+            throw new Error("Step must be positive.");
+          }
+          const list = [];
+          for (let v = start; v <= end + 1e-12; v += step) {
+            list.push(Number(v.toFixed(6)));
+          }
+          return list;
+        }
+
+        const list = value.split(",").map((entry) => Number(entry.trim()));
+        if (list.some((num) => !Number.isFinite(num))) {
+          throw new Error("List values must be numbers.");
+        }
+        return list;
+      }
+
+      function parseNumberValue(input, fallback) {
+        const value = Number(input);
+        return Number.isFinite(value) ? value : fallback;
+      }
+
+      function buildTemperatures(start, end, step) {
+        const temps = [];
+        for (let t = start; t <= end + 1e-12; t += step) {
+          temps.push(Number(t.toFixed(6)));
+        }
+        return temps;
+      }
+
+      function formatNumber(value, digits) {
+        return Number.isFinite(value) ? value.toFixed(digits) : "--";
+      }
+
+      function updateProgress(done, total, statusText) {
+        elements.progress.max = total;
+        elements.progress.value = done;
+        elements.progressLabel.textContent = `${done} / ${total}`;
+        elements.status.textContent = statusText;
+      }
+
+      function updateObservables(obs) {
+        elements.energyValue.textContent = formatNumber(obs.energyDensity, 5);
+        elements.magnetizationValue.textContent = formatNumber(obs.magnetizationDensity, 5);
+        elements.heatCapacityValue.textContent = formatNumber(obs.heatCapacity, 5);
+        elements.susceptibilityValue.textContent = formatNumber(obs.susceptibility, 5);
+        elements.binderValue.textContent = formatNumber(obs.binderU4, 5);
+      }
+
+      function drawLattice(model) {
+        const containerSize = Math.floor(elements.canvasWrap.clientWidth);
+        const cellSize = Math.max(1, Math.floor(containerSize / model.L));
+        const canvasSize = cellSize * model.L;
+        const dpr = window.devicePixelRatio || 1;
+
+        elements.lattice.width = Math.floor(canvasSize * dpr);
+        elements.lattice.height = Math.floor(canvasSize * dpr);
+        elements.lattice.style.width = `${canvasSize}px`;
+        elements.lattice.style.height = `${canvasSize}px`;
+
+        ctxLattice.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctxLattice.fillStyle = colors.background;
+        ctxLattice.fillRect(0, 0, canvasSize, canvasSize);
+
+        for (let y = 0; y < model.L; y++) {
+          for (let x = 0; x < model.L; x++) {
+            const index = y * model.L + x;
+            ctxLattice.fillStyle = model.spins[index] === 1 ? colors.up : colors.down;
+            ctxLattice.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+          }
+        }
+      }
+
+      function drawLineChart(canvas, series, options) {
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          return;
+        }
+
+        const width = canvas.clientWidth;
+        const height = canvas.clientHeight;
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = Math.floor(width * dpr);
+        canvas.height = Math.floor(height * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        ctx.clearRect(0, 0, width, height);
+        ctx.fillStyle = "white";
+        ctx.fillRect(0, 0, width, height);
+
+        if (series.length === 0 || series.every((s) => s.points.length === 0)) {
+          ctx.fillStyle = "#777";
+          ctx.font = "14px sans-serif";
+          ctx.fillText("No data yet", width / 2 - 40, height / 2);
+          return;
+        }
+
+        const padding = 42;
+        const xMin = Math.min(...series.flatMap((s) => s.points.map((p) => p.x)));
+        const xMax = Math.max(...series.flatMap((s) => s.points.map((p) => p.x)));
+        const yMin = Math.min(...series.flatMap((s) => s.points.map((p) => p.y)));
+        const yMax = Math.max(...series.flatMap((s) => s.points.map((p) => p.y)));
+        const xRange = xMax - xMin || 1;
+        const yRange = yMax - yMin || 1;
+
+        ctx.strokeStyle = "#ddd";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(padding, padding);
+        ctx.lineTo(padding, height - padding);
+        ctx.lineTo(width - padding, height - padding);
+        ctx.stroke();
+
+        ctx.strokeStyle = "var(--chart-grid)";
+        ctx.setLineDash([4, 4]);
+        for (let i = 1; i <= 3; i++) {
+          const y = padding + (i * (height - 2 * padding)) / 4;
+          ctx.beginPath();
+          ctx.moveTo(padding, y);
+          ctx.lineTo(width - padding, y);
+          ctx.stroke();
+        }
+        ctx.setLineDash([]);
+
+        for (const line of series) {
+          if (line.points.length === 0) {
+            continue;
+          }
+          ctx.strokeStyle = line.color;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          line.points.forEach((point, index) => {
+            const x =
+              padding + ((point.x - xMin) / xRange) * (width - 2 * padding);
+            const y =
+              height -
+              padding -
+              ((point.y - yMin) / yRange) * (height - 2 * padding);
+            if (index === 0) {
+              ctx.moveTo(x, y);
+            } else {
+              ctx.lineTo(x, y);
+            }
+          });
+          ctx.stroke();
+        }
+
+        ctx.fillStyle = "#555";
+        ctx.font = "12px sans-serif";
+        ctx.fillText(options.xLabel, width - padding - 40, height - 12);
+        ctx.save();
+        ctx.translate(14, padding + 10);
+        ctx.rotate(-Math.PI / 2);
+        ctx.fillText(options.yLabel, 0, 0);
+        ctx.restore();
+      }
+
+      function updateLegend(container, series) {
+        container.innerHTML = "";
+        series.forEach((item) => {
+          const span = document.createElement("span");
+          const swatch = document.createElement("i");
+          swatch.style.background = item.color;
+          span.appendChild(swatch);
+          span.appendChild(document.createTextNode(item.label));
+          container.appendChild(span);
+        });
+      }
+
+      function estimateBinderCrossing(temperatures, u4a, u4b) {
+        let bestIndex = 0;
+        let bestDiff = Number.POSITIVE_INFINITY;
+
+        for (let i = 0; i < temperatures.length; i++) {
+          const diff = u4a[i] - u4b[i];
+          const absDiff = Math.abs(diff);
+          if (absDiff < bestDiff) {
+            bestDiff = absDiff;
+            bestIndex = i;
+          }
+
+          if (i === 0) {
+            continue;
+          }
+
+          const prevDiff = u4a[i - 1] - u4b[i - 1];
+          if (prevDiff === 0) {
+            return { temperature: temperatures[i - 1], method: "sign-change" };
+          }
+
+          if (prevDiff * diff < 0) {
+            const t1 = temperatures[i - 1];
+            const t2 = temperatures[i];
+            const tCross = t1 + (0 - prevDiff) * (t2 - t1) / (diff - prevDiff);
+            return { temperature: tCross, method: "sign-change" };
+          }
+        }
+
+        return { temperature: temperatures[bestIndex], method: "min-diff" };
+      }
+
+      function updateCharts() {
+        const entries = [...results.entries()].sort((a, b) => a[0] - b[0]);
+
+        const seriesU4 = entries.map(([L, data], index) => ({
+          label: `L=${L}`,
+          color: palette[index % palette.length],
+          points: data.temps.map((t, i) => ({ x: t, y: data.u4[i] })),
+        }));
+
+        const seriesC = entries.map(([L, data], index) => ({
+          label: `L=${L}`,
+          color: palette[index % palette.length],
+          points: data.temps.map((t, i) => ({ x: t, y: data.c[i] })),
+        }));
+
+        drawLineChart(elements.chartU4, seriesU4, { xLabel: "T", yLabel: "U4" });
+        drawLineChart(elements.chartC, seriesC, { xLabel: "T", yLabel: "C" });
+        updateLegend(elements.legendU4, seriesU4);
+        updateLegend(elements.legendC, seriesC);
+
+        if (entries.length >= 2) {
+          const last = entries[entries.length - 1];
+          const prev = entries[entries.length - 2];
+          const crossing = estimateBinderCrossing(last[1].temps, prev[1].u4, last[1].u4);
+          elements.tcValue.textContent = `${crossing.temperature.toFixed(4)} (${crossing.method})`;
+        }
+      }
+
+      function updatePerfChart(perfData) {
+        const series = [
+          {
+            label: "ms per sweep",
+            color: palette[0],
+            points: perfData.map((row) => ({ x: row.l2, y: row.msPerSweep })),
+          },
+        ];
+        drawLineChart(elements.chartPerf, series, { xLabel: "L^2", yLabel: "ms" });
+        updateLegend(elements.legendPerf, series);
+      }
+
+      function disableControls(disabled) {
+        elements.run.disabled = disabled;
+        elements.stop.disabled = !disabled;
+        elements.lList.disabled = disabled;
+        elements.tStart.disabled = disabled;
+        elements.tEnd.disabled = disabled;
+        elements.tStep.disabled = disabled;
+        elements.thermal.disabled = disabled;
+        elements.sample.disabled = disabled;
+        elements.interval.disabled = disabled;
+        elements.seed.disabled = disabled;
+        elements.initial.disabled = disabled;
+        elements.benchSweeps.disabled = disabled;
+        elements.benchTemp.disabled = disabled;
+      }
+
+      async function yieldToUI() {
+        return new Promise((resolve) => requestAnimationFrame(resolve));
+      }
+
+      async function runBenchmark(Ls) {
+        const sweeps = parseNumberValue(elements.benchSweeps.value, 150);
+        const temp = parseNumberValue(elements.benchTemp.value, 2.3);
+        const beta = 1 / temp;
+        const perf = [];
+
+        for (const L of Ls) {
+          if (abort) {
+            break;
+          }
+          const model = new IsingModel(L, "random");
+          for (let i = 0; i < 10; i++) {
+            model.sweep(beta);
+          }
+          await yieldToUI();
+          const start = performance.now();
+          for (let i = 0; i < sweeps; i++) {
+            model.sweep(beta);
+          }
+          const elapsed = performance.now() - start;
+          perf.push({ L, l2: L * L, msPerSweep: elapsed / sweeps });
+          await yieldToUI();
+        }
+
+        updatePerfChart(perf);
+      }
+
+      async function runBatch() {
+        if (running) {
+          return;
+        }
+
+        try {
+          running = true;
+          abort = false;
+          disableControls(true);
+
+          const Ls = parseNumberList(elements.lList.value, [16, 24, 32]);
+          const tStart = parseNumberValue(elements.tStart.value, 2.0);
+          const tEnd = parseNumberValue(elements.tEnd.value, 2.6);
+          const tStep = parseNumberValue(elements.tStep.value, 0.05);
+          const temperatures = buildTemperatures(tStart, tEnd, tStep);
+          const thermal = parseNumberValue(elements.thermal.value, 200);
+          const sample = parseNumberValue(elements.sample.value, 600);
+          const interval = Math.max(1, parseNumberValue(elements.interval.value, 5));
+          const seedRaw = elements.seed.value.trim();
+          const seed = seedRaw === "" ? undefined : Number(seedRaw);
+          const initial = elements.initial.value;
+
+          const total = Ls.length * temperatures.length;
+          let done = 0;
+          results = new Map();
+
+          updateProgress(0, total, "Running...");
+
+          for (const L of Ls) {
+            const series = { temps: [], u4: [], c: [] };
+
+            for (let tIndex = 0; tIndex < temperatures.length; tIndex++) {
+              if (abort) {
+                break;
+              }
+
+              const temperature = temperatures[tIndex];
+              const beta = 1 / temperature;
+              const runSeed = seed === undefined ? undefined : seed + L * 1000 + tIndex;
+              const model = new IsingModel(L, initial, runSeed);
+              const stats = new StatsAccumulator();
+
+              for (let i = 0; i < thermal; i++) {
+                model.sweep(beta);
+                if (i % 20 === 0) {
+                  await yieldToUI();
+                }
+              }
+
+              for (let step = 1; step <= sample; step++) {
+                model.sweep(beta);
+                if (step % interval === 0) {
+                  stats.addSample(model.energy, model.magnetization);
+                }
+                if (step % 25 === 0) {
+                  await yieldToUI();
+                }
+              }
+
+              const obs = stats.getObservables(beta, model.N);
+              series.temps.push(temperature);
+              series.u4.push(obs.binderU4);
+              series.c.push(obs.heatCapacity);
+
+              latestModel = model;
+              elements.currentLT.textContent = `L=${L}, T=${temperature.toFixed(2)}`;
+              elements.currentSweeps.textContent = String(thermal + sample);
+              updateObservables(obs);
+              drawLattice(model);
+
+              done += 1;
+              updateProgress(done, total, `Running L=${L}, T=${temperature.toFixed(2)}`);
+              await yieldToUI();
+            }
+
+            results.set(L, series);
+            updateCharts();
+          }
+
+          if (!abort) {
+            await runBenchmark(Ls);
+            updateProgress(total, total, "Completed");
+          } else {
+            updateProgress(done, total, "Stopped");
+          }
+        } catch (error) {
+          updateProgress(0, 1, "Error");
+          alert(error.message || "Unknown error");
+        } finally {
+          running = false;
+          abort = false;
+          disableControls(false);
+        }
+      }
+
+      function resetResults() {
+        results = new Map();
+        elements.tcValue.textContent = "--";
+        elements.energyValue.textContent = "--";
+        elements.magnetizationValue.textContent = "--";
+        elements.heatCapacityValue.textContent = "--";
+        elements.susceptibilityValue.textContent = "--";
+        elements.binderValue.textContent = "--";
+        elements.currentLT.textContent = "-";
+        elements.currentSweeps.textContent = "0";
+        updateProgress(0, 1, "Idle");
+        drawLineChart(elements.chartU4, [], { xLabel: "T", yLabel: "U4" });
+        drawLineChart(elements.chartC, [], { xLabel: "T", yLabel: "C" });
+        drawLineChart(elements.chartPerf, [], { xLabel: "L^2", yLabel: "ms" });
+        elements.legendU4.innerHTML = "";
+        elements.legendC.innerHTML = "";
+        elements.legendPerf.innerHTML = "";
+      }
+
+      elements.run.addEventListener("click", runBatch);
+      elements.stop.addEventListener("click", () => {
+        abort = true;
+      });
+      elements.reset.addEventListener("click", resetResults);
+
+      new ResizeObserver(() => {
+        if (latestModel) {
+          drawLattice(latestModel);
+        }
+        updateCharts();
+      }).observe(elements.canvasWrap);
+
+      resetResults();
+    </script>
+  </body>
+</html>
