@@ -49,6 +49,13 @@ npm run dev:web
 npm run build:web
 ```
 
+## GitHub Pages
+GitHub Pages でも公開できます。main にマージ後、Settings > Pages で Source を
+GitHub Actions に設定してください。
+
+URL:
+https://ryomatsuchimochi.github.io/two-dimensional-ising-model/
+
 ## 出力
 - output/L{L}/observables.csv に温度ごとの観測量を書き出します。
 
