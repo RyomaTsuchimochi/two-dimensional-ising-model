@@ -1,0 +1,2 @@
+noteができたらgithub上にpulic repository
+を作ってそのURLを作成して
