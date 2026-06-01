@@ -23,8 +23,10 @@ jobs:
       - name: Build pages artifact
         run: |
           mkdir -p pages
-          cp web/assignment.html pages/index.html
-          cp web/standalone.html pages/standalone.html
+          cp web/index-pages.html pages/index.html
+          cp web/results.html     pages/results.html
+          cp web/assignment.html  pages/assignment.html
+          cp web/standalone.html  pages/standalone.html
       - uses: actions/upload-pages-artifact@v3
         with:
           path: pages

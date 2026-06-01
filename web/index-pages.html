@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>2D Ising Model</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg-1: #f8f2e9;
+        --bg-2: #dfeee7;
+        --ink: #1b1a17;
+        --muted: #4c4c4c;
+        --accent: #1c6f64;
+        --accent-2: #f2a154;
+        --panel: rgba(255, 255, 255, 0.92);
+        --panel-border: #e5d8c8;
+        --shadow: 0 18px 40px rgba(20, 20, 20, 0.12);
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        font-family: "Avenir Next", "Gill Sans", system-ui, sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 10% 10%, rgba(242, 161, 84, 0.35), transparent 45%),
+          radial-gradient(circle at 90% 15%, rgba(28, 111, 100, 0.25), transparent 40%),
+          linear-gradient(135deg, var(--bg-1), var(--bg-2));
+        min-height: 100vh;
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: -20% 50% 40% -10%;
+        background: conic-gradient(from 140deg, rgba(28, 111, 100, 0.15), transparent 60%);
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      #app {
+        position: relative;
+        z-index: 1;
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 48px 24px 80px;
+      }
+
+      .eyebrow {
+        text-transform: uppercase;
+        letter-spacing: 0.22em;
+        font-size: 0.75rem;
+        color: var(--accent);
+        margin: 0 0 14px;
+        font-weight: 600;
+      }
+
+      h1 {
+        font-family: "Iowan Old Style", "Palatino Linotype", Palatino, serif;
+        font-size: clamp(2.4rem, 5vw, 3.8rem);
+        margin: 0 0 16px;
+        line-height: 1.15;
+      }
+
+      .lead {
+        max-width: 560px;
+        color: var(--muted);
+        font-size: 1.05rem;
+        line-height: 1.65;
+        margin: 0 0 48px;
+      }
+
+      .cards {
+        display: grid;
+        gap: 20px;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      }
+
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--panel-border);
+        border-radius: 20px;
+        padding: 28px 24px;
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(10px);
+        text-decoration: none;
+        color: var(--ink);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        animation: rise 0.6s ease both;
+      }
+
+      .card:nth-child(2) { animation-delay: 0.08s; }
+      .card:nth-child(3) { animation-delay: 0.16s; }
+
+      .card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 24px 48px rgba(20,20,20,0.15);
+      }
+
+      @keyframes rise {
+        from { transform: translateY(16px); opacity: 0; }
+        to   { transform: translateY(0);    opacity: 1; }
+      }
+
+      .card-tag {
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+        color: var(--accent);
+        font-weight: 700;
+      }
+
+      .card h2 {
+        margin: 0;
+        font-size: 1.35rem;
+      }
+
+      .card p {
+        margin: 0;
+        font-size: 0.9rem;
+        color: var(--muted);
+        line-height: 1.55;
+        flex: 1;
+      }
+
+      .card-arrow {
+        font-size: 1.1rem;
+        color: var(--accent);
+        align-self: flex-end;
+      }
+
+      .summary {
+        margin-top: 48px;
+        background: var(--panel);
+        border: 1px solid var(--panel-border);
+        border-radius: 20px;
+        padding: 28px 24px;
+        box-shadow: var(--shadow);
+      }
+
+      .summary h2 {
+        margin: 0 0 16px;
+        font-size: 1.1rem;
+      }
+
+      .checks {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: grid;
+        gap: 10px;
+      }
+
+      .checks li {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 0.92rem;
+        color: var(--muted);
+      }
+
+      .checks li::before {
+        content: "✅";
+        font-size: 1rem;
+        flex-shrink: 0;
+      }
+
+      .footer {
+        margin-top: 40px;
+        font-size: 0.82rem;
+        color: var(--muted);
+      }
+
+      @media (max-width: 500px) {
+        .cards { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <p class="eyebrow">Statistical Mechanics · Monte Carlo</p>
+      <h1>2次元イジング模型</h1>
+      <p class="lead">
+        古典 Metropolis モンテカルロ法で 2D 強磁性イジング模型をシミュレーション。
+        有限サイズスケーリングにより転移温度 T<sub>c</sub> を推定した。
+      </p>
+
+      <div class="cards">
+        <a href="results.html" class="card">
+          <span class="card-tag">Results</span>
+          <h2>課題結果</h2>
+          <p>
+            Binder cumulant・比熱・O(L²) スケーリングのグラフを一覧表示。
+            有限サイズスケーリングによる T<sub>c</sub> 推定結果を確認できる。
+          </p>
+          <span class="card-arrow">→</span>
+        </a>
+
+        <a href="assignment.html" class="card">
+          <span class="card-tag">Lab</span>
+          <h2>インタラクティブ Lab</h2>
+          <p>
+            温度範囲・複数 L を指定してバッチ走査。
+            Binder U4 曲線・比熱グラフをリアルタイム描画し、Tc を自分で推定できる。
+          </p>
+          <span class="card-arrow">→</span>
+        </a>
+
+        <a href="standalone.html" class="card">
+          <span class="card-tag">Playground</span>
+          <h2>格子 Playground</h2>
+          <p>
+            温度・格子サイズをスライダーで調整しながら、スピン格子の相転移をリアルタイムで観察できる。
+          </p>
+          <span class="card-arrow">→</span>
+        </a>
+      </div>
+
+      <div class="summary">
+        <h2>課題チェックリスト</h2>
+        <ul class="checks">
+          <li>2D 強磁性イジング模型を Metropolis モンテカルロ法で実装</li>
+          <li>1 MCS = L² スピン全更新（課題仕様通り）</li>
+          <li>有限サイズスケーリング（L=8, 12, 16, 24）で T<sub>c</sub> を推定</li>
+          <li>計算時間が O(L²) でスケールすることをベンチマークで確認</li>
+          <li>L=2〜4 の小サイズでユニットテスト（6 テスト全通過）</li>
+        </ul>
+      </div>
+
+      <footer class="footer">
+        実装: TypeScript + Node.js。乱数: Mulberry32。
+        厳密値: T<sub>c</sub> = 2/ln(1+√2) ≈ 2.2692（Onsager 1944）。
+      </footer>
+    </div>
+  </body>
+</html>

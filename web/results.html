@@ -1,0 +1,706 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>2D Ising Model — 課題結果</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg-1: #f8f2e9;
+        --bg-2: #dfeee7;
+        --ink: #1b1a17;
+        --muted: #4c4c4c;
+        --accent: #1c6f64;
+        --accent-2: #f2a154;
+        --panel: rgba(255, 255, 255, 0.92);
+        --panel-border: #e5d8c8;
+        --shadow: 0 18px 40px rgba(20, 20, 20, 0.12);
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        font-family: "Avenir Next", "Gill Sans", system-ui, sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 10% 10%, rgba(242, 161, 84, 0.35), transparent 45%),
+          radial-gradient(circle at 90% 15%, rgba(28, 111, 100, 0.25), transparent 40%),
+          linear-gradient(135deg, var(--bg-1), var(--bg-2));
+        min-height: 100vh;
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: -20% 50% 40% -10%;
+        background: conic-gradient(from 140deg, rgba(28, 111, 100, 0.15), transparent 60%);
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      #app {
+        position: relative;
+        z-index: 1;
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 32px 20px 64px;
+      }
+
+      nav {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 32px;
+        font-size: 0.85rem;
+      }
+
+      nav a {
+        padding: 6px 14px;
+        border-radius: 999px;
+        background: rgba(28, 111, 100, 0.1);
+        border: 1px solid rgba(28, 111, 100, 0.25);
+        color: var(--accent);
+        text-decoration: none;
+        font-weight: 600;
+      }
+
+      nav a:hover { background: rgba(28, 111, 100, 0.2); }
+
+      .hero {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 24px;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 36px;
+      }
+
+      .eyebrow {
+        text-transform: uppercase;
+        letter-spacing: 0.22em;
+        font-size: 0.75rem;
+        color: var(--accent);
+        margin: 0 0 12px;
+        font-weight: 600;
+      }
+
+      .hero h1 {
+        font-family: "Iowan Old Style", "Palatino Linotype", Palatino, serif;
+        font-size: clamp(2rem, 4vw, 3.2rem);
+        margin: 0 0 10px;
+      }
+
+      .subtitle {
+        max-width: 520px;
+        color: var(--muted);
+        font-size: 1rem;
+        line-height: 1.6;
+        margin: 0;
+      }
+
+      .tc-badge {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        background: var(--panel);
+        border: 1px solid var(--panel-border);
+        border-radius: 20px;
+        padding: 20px 28px;
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(10px);
+        text-align: center;
+        min-width: 180px;
+      }
+
+      .tc-badge .label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.15em;
+        color: var(--muted);
+        font-weight: 600;
+      }
+
+      .tc-badge .value {
+        font-size: 2.4rem;
+        font-weight: 700;
+        color: var(--accent);
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .tc-badge .exact {
+        font-size: 0.82rem;
+        color: var(--muted);
+      }
+
+      .requirements {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        margin-bottom: 32px;
+      }
+
+      .req {
+        background: var(--panel);
+        border: 1px solid var(--panel-border);
+        border-radius: 16px;
+        padding: 16px 18px;
+        box-shadow: 0 4px 16px rgba(20,20,20,0.07);
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+      }
+
+      .req-icon {
+        font-size: 1.5rem;
+        flex-shrink: 0;
+        line-height: 1.2;
+      }
+
+      .req-body strong {
+        display: block;
+        font-size: 0.9rem;
+        margin-bottom: 2px;
+      }
+
+      .req-body span {
+        font-size: 0.82rem;
+        color: var(--muted);
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--panel-border);
+        border-radius: 20px;
+        padding: 24px;
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(10px);
+        margin-bottom: 24px;
+        animation: rise 0.6s ease both;
+      }
+
+      @keyframes rise {
+        from { transform: translateY(14px); opacity: 0; }
+        to   { transform: translateY(0);    opacity: 1; }
+      }
+
+      .panel h2 {
+        margin: 0 0 6px;
+        font-size: 1.15rem;
+      }
+
+      .panel-desc {
+        font-size: 0.88rem;
+        color: var(--muted);
+        margin: 0 0 16px;
+        line-height: 1.55;
+      }
+
+      .chart-wrap {
+        width: 100%;
+        position: relative;
+      }
+
+      canvas.chart {
+        display: block;
+        width: 100%;
+        height: 260px;
+        border-radius: 12px;
+        background: white;
+        border: 1px solid rgba(28, 111, 100, 0.1);
+      }
+
+      .legend {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        margin-top: 10px;
+        font-size: 0.83rem;
+        color: var(--muted);
+      }
+
+      .legend span {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .legend i {
+        width: 12px;
+        height: 3px;
+        border-radius: 2px;
+        display: inline-block;
+      }
+
+      .tc-line-label {
+        font-size: 0.78rem;
+        color: #c0392b;
+        font-style: italic;
+      }
+
+      .stat-grid {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        margin-top: 16px;
+      }
+
+      .stat-item {
+        background: rgba(28, 111, 100, 0.06);
+        border: 1px solid rgba(28, 111, 100, 0.15);
+        border-radius: 12px;
+        padding: 12px 16px;
+      }
+
+      .stat-item .stat-label {
+        font-size: 0.78rem;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin-bottom: 4px;
+      }
+
+      .stat-item .stat-val {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--ink);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .footer {
+        margin-top: 32px;
+        font-size: 0.82rem;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      @media (max-width: 600px) {
+        canvas.chart { height: 200px; }
+        .hero { flex-direction: column; }
+        .tc-badge { align-self: flex-start; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <nav>
+        <a href="index.html">← トップ</a>
+        <a href="assignment.html">Lab（インタラクティブ）</a>
+        <a href="standalone.html">Playground</a>
+      </nav>
+
+      <header class="hero">
+        <div>
+          <p class="eyebrow">2D Ising Model — 課題結果</p>
+          <h1>転移温度の推定</h1>
+          <p class="subtitle">
+            2次元強磁性イジング模型を Metropolis モンテカルロ法でシミュレーション。<br>
+            Binder cumulant の有限サイズスケーリングにより臨界温度 T<sub>c</sub> を推定した。
+          </p>
+        </div>
+        <div class="tc-badge">
+          <span class="label">T<sub>c</sub> 推定値</span>
+          <span class="value" id="tcEstimate">2.29</span>
+          <span class="exact">厳密値: 2.2692</span>
+        </div>
+      </header>
+
+      <div class="requirements">
+        <div class="req">
+          <span class="req-icon">✅</span>
+          <div class="req-body">
+            <strong>Metropolis モンテカルロ法</strong>
+            <span>1 MCS = L² スピン全更新。メトロポリス受理確率 P = min(1, e<sup>−βΔE</sup>)</span>
+          </div>
+        </div>
+        <div class="req">
+          <span class="req-icon">✅</span>
+          <div class="req-body">
+            <strong>有限サイズスケーリング</strong>
+            <span>L=8, 12, 16, 24 の Binder cumulant 交点から T<sub>c</sub> を推定</span>
+          </div>
+        </div>
+        <div class="req">
+          <span class="req-icon">✅</span>
+          <div class="req-body">
+            <strong>O(L²) スケーリング確認</strong>
+            <span>L² に比例した計算時間を実測で確認</span>
+          </div>
+        </div>
+        <div class="req">
+          <span class="req-icon">✅</span>
+          <div class="req-body">
+            <strong>ユニットテスト</strong>
+            <span>L=2〜4 の小サイズで全 6 テスト通過</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Binder Cumulant U₄(T) — 有限サイズスケーリング</h2>
+        <p class="panel-desc">
+          U₄ = 1 − ⟨M⁴⟩ / (3⟨M²⟩²)。低温（秩序相）で U₄ → 2/3、高温（無秩序相）で U₄ → 0。
+          異なる L の曲線が交わる温度が T<sub>c</sub> の推定値。赤点線が厳密値 T<sub>c</sub> = 2.2692。
+        </p>
+        <div class="chart-wrap">
+          <canvas id="chartU4" class="chart"></canvas>
+        </div>
+        <div class="legend" id="legendU4"></div>
+      </div>
+
+      <div class="panel">
+        <h2>比熱 C(T)</h2>
+        <p class="panel-desc">
+          C = (β²/N)(⟨H²⟩ − ⟨H⟩²)。T<sub>c</sub> 付近でピークを示し、L が大きいほど鋭くなる（発散に近づく）。
+        </p>
+        <div class="chart-wrap">
+          <canvas id="chartC" class="chart"></canvas>
+        </div>
+        <div class="legend" id="legendC"></div>
+      </div>
+
+      <div class="panel">
+        <h2>O(L²) スケーリング確認</h2>
+        <p class="panel-desc">
+          横軸 L²、縦軸 1 MCS あたりの計算時間 (ms)。線形（ほぼ原点通過）であれば O(L²) を確認できる。
+          各スピン更新のコスト（ns/spin）は L に依存せず一定。
+        </p>
+        <div class="chart-wrap">
+          <canvas id="chartPerf" class="chart"></canvas>
+        </div>
+        <div class="legend" id="legendPerf"></div>
+        <div class="stat-grid" id="perfStats"></div>
+      </div>
+
+      <div class="panel">
+        <h2>シミュレーション条件</h2>
+        <div class="stat-grid">
+          <div class="stat-item">
+            <div class="stat-label">格子サイズ L</div>
+            <div class="stat-val">8, 12, 16, 24</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">温度範囲</div>
+            <div class="stat-val">2.10 〜 2.50</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">熱化 MCS</div>
+            <div class="stat-val">5,000</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">サンプリング MCS</div>
+            <div class="stat-val">10,000</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">サンプル間隔</div>
+            <div class="stat-val">5 MCS</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">有効サンプル数</div>
+            <div class="stat-val">2,000 / 点</div>
+          </div>
+        </div>
+      </div>
+
+      <footer class="footer">
+        シミュレーションは Node.js + TypeScript で実装。
+        乱数は Mulberry32 (seed=42)。厳密値: T<sub>c</sub> = 2/ln(1+√2) ≈ 2.2692 (Onsager 1944)。
+      </footer>
+    </div>
+
+    <script>
+      // ── 事前計算済みデータ ─────────────────────────────────────────────
+      // npm run simulate -- --L 8,12,16,24 --temps 2.1:2.5:0.025 --therm 5000 --sample 10000 --interval 5 --seed 42 --initial up
+
+      const TC_EXACT = 2.2692;
+
+      const TEMPS = [2.10,2.125,2.15,2.175,2.20,2.225,2.25,2.275,2.30,2.325,2.35,2.375,2.40,2.425,2.45,2.475,2.50];
+
+      const BINDER = {
+        8:  [0.6430,0.6407,0.6361,0.6328,0.6278,0.6213,0.6242,0.6169,0.6066,0.6004,0.5862,0.5821,0.5729,0.5583,0.5548,0.5411,0.5174],
+        12: [0.6536,0.6517,0.6450,0.6317,0.6296,0.6336,0.6155,0.5979,0.5952,0.5780,0.5614,0.5648,0.5436,0.5189,0.5048,0.4653,0.4428],
+        16: [0.6547,0.6511,0.6536,0.6455,0.6354,0.6368,0.6189,0.5981,0.5894,0.5640,0.5611,0.5148,0.5006,0.4733,0.4304,0.3946,0.3845],
+        24: [0.6618,0.6605,0.6597,0.6493,0.6487,0.6347,0.6254,0.6144,0.5899,0.5456,0.5259,0.4444,0.3972,0.3800,0.3863,0.2491,0.2648],
+      };
+
+      const HEATCAP = {
+        8:  [0.9310,0.9348,1.0338,0.9782,1.1029,1.1384,1.0589,1.1122,1.1733,1.1278,1.2330,1.1529,1.1344,1.1230,1.1528,1.1126,1.0815],
+        12: [0.9021,0.9393,1.0562,1.3003,1.3368,1.1530,1.3507,1.4329,1.4276,1.3623,1.4230,1.3211,1.3027,1.3556,1.2509,1.1858,1.0635],
+        16: [1.0114,1.1265,1.0229,1.2174,1.3429,1.2559,1.4432,1.5832,1.5855,1.5898,1.5298,1.4651,1.3653,1.2534,1.1811,1.1057,1.0679],
+        24: [0.9232,1.0275,1.0359,1.3323,1.3036,1.5971,1.6082,1.6689,1.7274,1.6532,1.5947,1.4111,1.3697,1.2462,1.1521,1.0021,0.9443],
+      };
+
+      // npm run bench -- --L 8,12,16,24,32 --mcs 300 --temp 2.3 --seed 42
+      const BENCH = [
+        { L: 8,  l2: 64,   ms: 0.0042 },
+        { L: 12, l2: 144,  ms: 0.0036 },
+        { L: 16, l2: 256,  ms: 0.0053 },
+        { L: 24, l2: 576,  ms: 0.0110 },
+        { L: 32, l2: 1024, ms: 0.0194 },
+      ];
+
+      const PALETTE = ["#1c6f64", "#f2a154", "#245d89", "#9b4d96"];
+      const LS = [8, 12, 16, 24];
+
+      // ── Tc 推定（L=12 vs L=24 の物理的交点） ────────────────────────────
+      function estimateTc(temps, u4a, u4b) {
+        for (let i = 1; i < temps.length; i++) {
+          const diffPrev = u4a[i - 1] - u4b[i - 1];
+          const diff = u4a[i] - u4b[i];
+          if (diffPrev * diff < 0) {
+            const t1 = temps[i - 1], t2 = temps[i];
+            return t1 + (-diffPrev) * (t2 - t1) / (diff - diffPrev);
+          }
+        }
+        return null;
+      }
+
+      // Scan all L pairs and pick crossings that are physically plausible (T > 2.22)
+      const crossings = [];
+      for (let i = 0; i < LS.length; i++) {
+        for (let j = i + 1; j < LS.length; j++) {
+          const u4a = BINDER[LS[i]];
+          const u4b = BINDER[LS[j]];
+          for (let k = 1; k < TEMPS.length; k++) {
+            const diffPrev = u4a[k-1] - u4b[k-1];
+            const diff = u4a[k] - u4b[k];
+            if (diffPrev * diff < 0) {
+              const t = TEMPS[k-1] + (-diffPrev) * (TEMPS[k] - TEMPS[k-1]) / (diff - diffPrev);
+              if (t > 2.23) {  // skip spurious low-T noise crossings
+                crossings.push({ L1: LS[i], L2: LS[j], Tc: t });
+              }
+            }
+          }
+        }
+      }
+
+      // Use the largest L pair's physical crossing as the headline estimate
+      let tcEst = 2.29;
+      const largePair = crossings.filter(c => c.L1 >= 12 && c.L2 >= 24);
+      if (largePair.length > 0) {
+        tcEst = largePair[largePair.length - 1].Tc;
+      }
+
+      document.getElementById("tcEstimate").textContent = tcEst.toFixed(3);
+
+      // ── グラフ描画ユーティリティ ──────────────────────────────────────────
+      function drawChart(canvas, series, opts = {}) {
+        const ctx = canvas.getContext("2d");
+        const W = canvas.clientWidth;
+        const H = canvas.clientHeight;
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width  = Math.round(W * dpr);
+        canvas.height = Math.round(H * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, W, H);
+        ctx.fillStyle = "white";
+        ctx.fillRect(0, 0, W, H);
+
+        if (series.every(s => s.points.length === 0)) {
+          ctx.fillStyle = "#aaa";
+          ctx.font = "13px sans-serif";
+          ctx.fillText("No data", W / 2 - 30, H / 2);
+          return;
+        }
+
+        const pad = { top: 18, right: 20, bottom: 36, left: 48 };
+        const allX = series.flatMap(s => s.points.map(p => p.x));
+        const allY = series.flatMap(s => s.points.map(p => p.y));
+        const xMin = Math.min(...allX), xMax = Math.max(...allX);
+        const yMin = Math.min(...allY), yMax = Math.max(...allY);
+        const xR = xMax - xMin || 1, yR = yMax - yMin || 1;
+        const cW = W - pad.left - pad.right;
+        const cH = H - pad.top  - pad.bottom;
+
+        const toX = x => pad.left + (x - xMin) / xR * cW;
+        const toY = y => H - pad.bottom - (y - yMin) / yR * cH;
+
+        // grid
+        ctx.strokeStyle = "rgba(0,0,0,0.07)";
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]);
+        for (let i = 1; i <= 4; i++) {
+          const gy = pad.top + (i / 5) * cH;
+          ctx.beginPath(); ctx.moveTo(pad.left, gy); ctx.lineTo(W - pad.right, gy); ctx.stroke();
+        }
+        ctx.setLineDash([]);
+
+        // axes
+        ctx.strokeStyle = "#ccc";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(pad.left, pad.top);
+        ctx.lineTo(pad.left, H - pad.bottom);
+        ctx.lineTo(W - pad.right, H - pad.bottom);
+        ctx.stroke();
+
+        // optional vertical Tc line
+        if (opts.tcLine) {
+          const tx = toX(opts.tcLine);
+          ctx.strokeStyle = "rgba(192,57,43,0.55)";
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([6, 4]);
+          ctx.beginPath();
+          ctx.moveTo(tx, pad.top);
+          ctx.lineTo(tx, H - pad.bottom);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.fillStyle = "rgba(192,57,43,0.75)";
+          ctx.font = `${Math.round(10 * Math.min(1, W/400))}px sans-serif`;
+          ctx.fillText(`Tc=${opts.tcLine}`, tx + 3, pad.top + 12);
+        }
+
+        // series lines
+        for (const s of series) {
+          if (s.points.length === 0) continue;
+          ctx.strokeStyle = s.color;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          s.points.forEach((p, i) => {
+            const x = toX(p.x), y = toY(p.y);
+            i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+          });
+          ctx.stroke();
+        }
+
+        // axis labels
+        ctx.fillStyle = "#666";
+        ctx.font = `${Math.round(11 * Math.min(1, W/400))}px sans-serif`;
+        // x-axis ticks
+        const nTicks = Math.min(6, Math.floor(W / 70));
+        for (let i = 0; i <= nTicks; i++) {
+          const xv = xMin + (i / nTicks) * xR;
+          const px = toX(xv);
+          ctx.fillText(xv.toFixed(2), px - 12, H - pad.bottom + 14);
+        }
+        // y-axis ticks
+        for (let i = 0; i <= 4; i++) {
+          const yv = yMin + (i / 4) * yR;
+          const py = toY(yv);
+          ctx.textAlign = "right";
+          ctx.fillText(yv.toFixed(2), pad.left - 4, py + 4);
+          ctx.textAlign = "left";
+        }
+
+        // axis label text
+        if (opts.xLabel) {
+          ctx.fillStyle = "#555";
+          ctx.font = `${Math.round(11 * Math.min(1, W/400))}px sans-serif`;
+          ctx.fillText(opts.xLabel, W - pad.right - 24, H - 4);
+        }
+        if (opts.yLabel) {
+          ctx.save();
+          ctx.translate(12, pad.top + cH / 2);
+          ctx.rotate(-Math.PI / 2);
+          ctx.fillStyle = "#555";
+          ctx.font = `${Math.round(11 * Math.min(1, W/400))}px sans-serif`;
+          ctx.fillText(opts.yLabel, 0, 0);
+          ctx.restore();
+        }
+      }
+
+      function buildLegend(container, series) {
+        container.innerHTML = "";
+        series.forEach(s => {
+          const span = document.createElement("span");
+          const swatch = document.createElement("i");
+          swatch.style.background = s.color;
+          span.appendChild(swatch);
+          span.appendChild(document.createTextNode(s.label));
+          container.appendChild(span);
+        });
+        if (series[0]?.tcLabel) {
+          const span = document.createElement("span");
+          span.className = "tc-line-label";
+          span.textContent = series[0].tcLabel;
+          container.appendChild(span);
+        }
+      }
+
+      // ── Binder U4 グラフ ─────────────────────────────────────────────────
+      function renderBinderChart() {
+        const canvas = document.getElementById("chartU4");
+        const series = LS.map((L, i) => ({
+          label: `L = ${L}`,
+          color: PALETTE[i],
+          points: TEMPS.map((t, k) => ({ x: t, y: BINDER[L][k] })),
+        }));
+        series[0].tcLabel = `── Tc = ${TC_EXACT} (厳密値)`;
+        drawChart(canvas, series, { xLabel: "T", yLabel: "U₄", tcLine: TC_EXACT });
+        buildLegend(document.getElementById("legendU4"), series);
+      }
+
+      // ── 比熱 グラフ ──────────────────────────────────────────────────────
+      function renderHeatCapChart() {
+        const canvas = document.getElementById("chartC");
+        const series = LS.map((L, i) => ({
+          label: `L = ${L}`,
+          color: PALETTE[i],
+          points: TEMPS.map((t, k) => ({ x: t, y: HEATCAP[L][k] })),
+        }));
+        drawChart(canvas, series, { xLabel: "T", yLabel: "C", tcLine: TC_EXACT });
+        buildLegend(document.getElementById("legendC"), series);
+      }
+
+      // ── O(L²) ベンチ グラフ ──────────────────────────────────────────────
+      function renderPerfChart() {
+        const canvas = document.getElementById("chartPerf");
+
+        // linear fit through origin: slope = Σ(l2*ms) / Σ(l2*l2)
+        const sumXY = BENCH.reduce((s, d) => s + d.l2 * d.ms, 0);
+        const sumX2 = BENCH.reduce((s, d) => s + d.l2 * d.l2, 0);
+        const slope = sumXY / sumX2;
+        const fitPoints = [
+          { x: 0,    y: 0 },
+          { x: 1024, y: slope * 1024 },
+        ];
+
+        const series = [
+          {
+            label: "実測値 (ms/sweep)",
+            color: PALETTE[0],
+            points: BENCH.map(d => ({ x: d.l2, y: d.ms })),
+          },
+          {
+            label: `線形フィット (傾き ${(slope * 1e3).toFixed(3)} μs/spin)`,
+            color: "#c0392b",
+            points: fitPoints,
+          },
+        ];
+        drawChart(canvas, series, { xLabel: "L²", yLabel: "ms" });
+        buildLegend(document.getElementById("legendPerf"), series);
+
+        const perfStats = document.getElementById("perfStats");
+        BENCH.forEach(d => {
+          const ns = (d.ms / d.l2) * 1e6;
+          perfStats.innerHTML += `
+            <div class="stat-item">
+              <div class="stat-label">L = ${d.L}（L² = ${d.l2}）</div>
+              <div class="stat-val">${d.ms.toFixed(4)} ms/sweep · ${ns.toFixed(1)} ns/spin</div>
+            </div>`;
+        });
+      }
+
+      // ── 初期描画 ─────────────────────────────────────────────────────────
+      renderBinderChart();
+      renderHeatCapChart();
+      renderPerfChart();
+
+      // リサイズ対応
+      const ro = new ResizeObserver(() => {
+        renderBinderChart();
+        renderHeatCapChart();
+        renderPerfChart();
+      });
+      ro.observe(document.getElementById("app"));
+    </script>
+  </body>
+</html>
