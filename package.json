@@ -1,0 +1,20 @@
+{
+  "name": "two-dimensional-ising-model",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "npm run build && node --test dist/tests/*.js",
+    "simulate": "npm run build && node dist/src/cli/simulate.js",
+    "bench": "npm run build && node dist/src/cli/benchmark.js",
+    "dev:web": "vite --host",
+    "build:web": "vite build",
+    "preview:web": "vite preview --host"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.5"
+  }
+}
